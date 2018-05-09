@@ -67,14 +67,18 @@ namespace ComputeService
                 {
                     if(idForCalling != -1)
                     {
-                        if(globalIndex > FileWatcher.instances)
+                        if(!CheckIfExist(numberForProxie,idForCalling))
                         {
+                            helpProxies.RemoveAt(globalIndex);
+                            proxies.RemoveAt(globalIndex);
                             StartSingleProcess(usablePort); //posto proveravam hasExited prop moram da izbacim iz dict i ubacim novi
                         }
                         else
                         {
                             int instance = FreeProxiesNumber(numberForProxie); //vraca indeks slobodnog 
                             proxies[instance].Load("ClientPacket.dll");
+                            helpProxies.RemoveAt(globalIndex);
+                            proxies.RemoveAt(globalIndex);
                             StartSingleProcess(usablePort);
                             numberForProxie.Remove(idForCalling);
                         }
@@ -82,6 +86,8 @@ namespace ComputeService
                 }else
                 {
                     StartSingleProcess(usablePort);
+                    helpProxies.RemoveAt(globalIndex);
+                    proxies.RemoveAt(globalIndex);
                     numberForProxie.Remove(idForCalling);
                     int instance = FreeProxiesNumber(numberForProxie);
                     //proxies.RemoveAt(instance);
@@ -100,6 +106,17 @@ namespace ComputeService
 
             sw.Stop();
 
+        }
+
+        public static bool CheckIfExist(Dictionary<int, int> numberForProxie,int id)
+        {
+            if(numberForProxie.ContainsKey(id))
+            {
+                return true;
+            }else
+            {
+                return false;
+            }
         }
 
         public static void StartSingleProcess(string port)
@@ -125,7 +142,7 @@ namespace ComputeService
                 {
                     numberForProxie.Add(i, i);
                     int index = helpProxies.FindIndex(x => x == i);
-                    return i;
+                    return index;
                 }
             }
 
@@ -160,8 +177,7 @@ namespace ComputeService
                     processesIDs.Remove(p.Key);
                     int instance = Int32.Parse(ret) % 10;
                     globalIndex=helpProxies.FindIndex(x => x == instance);
-                    helpProxies.RemoveAt(globalIndex);
-                    proxies.RemoveAt(globalIndex);
+                    
 
                     return ret;
                 }
