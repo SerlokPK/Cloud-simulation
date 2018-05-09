@@ -1,0 +1,6 @@
+b)	proveravas da li je kontejner pao, ako je pao i ima neki slobodan od ostalih, pokreces taj postojeci, ako su ostali zauzeti, 
+	pokreces opet taj sto je pao. Gasis kontejner na X dugme programa, na svakih 5 sec se proverava da li je kontejner ziv i vraca potvrdu da je ziv
+
+c) treba trenutan kontejner da dobije podatak o bratskim instancama, ukoliko je prvi trenunti, dobije od 2,3,4 da su bratske,
+	to se vrsi tkao sto metodi prosledim adresu (to je ustv smao port) i ID kontejnera i on to vrati compute service-u i ovaj mu vrati
+	bratske instance

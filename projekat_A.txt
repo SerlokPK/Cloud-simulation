@@ -1,0 +1,14 @@
+console app popkrece 4 capp kontejner
+	- compute cita stalno sa neke lokacija xml fajlove, cita u koliko kontejnera se pokrece app, poziva kontejnere da ucitavaju dllove ucitane iz xml-a
+	- MEF biblioteka, za pokretanje dinamicki dll-ova ( plugable )
+
+
+solution 2 capp i 1 biblioteka
+
+1. capp pokrece 4 kontejnersku app i kroz parametar proslediti port
+2. thread trazi par dll i xml sa istim imenom(compute)
+3. primer: <count> X </count>
+4. svaki kontejner = poseban folder, signalizacija kontejneru da pokrenu app(dll), WCF -> pokreni dll "ime".dll
+	interfejs se odnosi na klijentsku applikaciju koju zalimo da pokrenemo [ ukoliko dll nije compatabilan sa interjesom, treba ispisati gresku ]
+5. svaki kontjner potrebno je da podigne server ( zbog recimo Load())
+compute->copy dll u folder za kontjnere-> compute salje Load() kontejnerima -> kontejneri ucitavaju dll i pokrecu sa IWorkerRole
