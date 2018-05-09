@@ -85,6 +85,7 @@ namespace ComputeService
                                 File.Copy(e.FullPath, path + subName + ".dll");
 
                             Containers.Path.currentIndex = i;
+                            Program.numberForProxie.Add(i, i);
                             string ret=ComputeService.Program.proxies[i].Load(subName + ".dll"); 
 
                             Console.WriteLine($"Container{i} - {ret}");

@@ -16,9 +16,11 @@ namespace ComputeService
 
     class Program
     {
-        //public static List<string> ports = new List<string> { "10010", "10011", "10012", "10013" };
+        private static int globalIndex=-1;
         public static List<IContainer> proxies = new List<IContainer>();
-        public static Dictionary<Process, int> processesIDs = new Dictionary<Process, int>();
+        public static List<int> helpProxies = new List<int>();
+        public static Dictionary<Process, string> OriginalprocessesIDs = new Dictionary<Process, string>();
+        public static Dictionary<int, int> numberForProxie = new Dictionary<int, int>(); //koji proces nema pokrenut dll
 
         static void Main(string[] args)
         {
@@ -34,25 +36,19 @@ namespace ComputeService
             }
 
             Console.WriteLine();
-            int temp = 0;
-            Process[] processList = Process.GetProcessesByName("cont1"); //originalnih 4
-            foreach(Process p in processList)
-            {
-                processesIDs.Add(p, temp);
-                ++temp;
-            }
 
             while (true)
             {
-                CheckProcess(processesIDs);
+                CheckProcess(OriginalprocessesIDs,numberForProxie);
             }
 
             Console.WriteLine("Press any key to exit.");
             Console.ReadKey(true);
         }
 
-        private static void CheckProcess(Dictionary<Process, int> processesIDs)
+        private static void CheckProcess(Dictionary<Process, string> processesIDs, Dictionary<int, int> numberForProxie)
         {
+            
             string status;
             if (!Exist())
             {
@@ -64,11 +60,33 @@ namespace ComputeService
            
             if (status.Equals("exit"))
             {
-                Process[] newProcessList = Process.GetProcessesByName("cont1");
-                int usableID= GetID(processesIDs);
-                proxies[FileWatcher.instances].Load("ClientPacket.dll"); //proveri sta se desi ako ugasis onaj koji nema pokrenut dll
+                string usablePort = GetPort(processesIDs);
+                int idForCalling = LastNumber(usablePort);
                 
-                //Process.Start(Containers.Path.location, port.ToString());                
+                if (FileWatcher.instances < 4)
+                {
+                    if(idForCalling != -1)
+                    {
+                        if(globalIndex > FileWatcher.instances)
+                        {
+                            StartSingleProcess(usablePort); //posto proveravam hasExited prop moram da izbacim iz dict i ubacim novi
+                        }
+                        else
+                        {
+                            int instance = FreeProxiesNumber(numberForProxie); //vraca indeks slobodnog 
+                            proxies[instance].Load("ClientPacket.dll");
+                            StartSingleProcess(usablePort);
+                            numberForProxie.Remove(idForCalling);
+                        }
+                    }                 
+                }else
+                {
+                    StartSingleProcess(usablePort);
+                    numberForProxie.Remove(idForCalling);
+                    int instance = FreeProxiesNumber(numberForProxie);
+                    //proxies.RemoveAt(instance);
+                    proxies[3].Load("ClientPacket.dll");
+                }                     
             }
 
             Stopwatch sw = new Stopwatch();
@@ -84,54 +102,75 @@ namespace ComputeService
 
         }
 
-        public static int GetID(Dictionary<Process, int> processesIDs)
+        public static void StartSingleProcess(string port)
         {
-            foreach(var p in processesIDs)
+            Process p = Process.Start(Containers.Path.location, port);
+            NetTcpBinding binding = new NetTcpBinding();
+            binding.OpenTimeout = new TimeSpan(0, 10, 0);
+            binding.CloseTimeout = new TimeSpan(0, 10, 0);
+            binding.SendTimeout = new TimeSpan(0, 10, 0);
+            binding.ReceiveTimeout = new TimeSpan(0, 10, 0);
+            ChannelFactory<IContainer> factory = new ChannelFactory<IContainer>(binding, new EndpointAddress($"net.tcp://localhost:{port}/IContainer")); // moraju se cuvati proxiji zbog poziva metode load n puta 
+            proxies.Add(factory.CreateChannel());
+            int temp = Int32.Parse(port) % 10;
+            helpProxies.Add(temp);
+            OriginalprocessesIDs.Add(p, port);
+        }
+
+        public static int FreeProxiesNumber(Dictionary<int, int> numberForProxie)
+        {
+            for(int i=0; i<4; ++i)
             {
-                if(p.Key.HasExited)
+                if(!numberForProxie.ContainsKey(i))
                 {
-                    return p.Value;
+                    numberForProxie.Add(i, i);
+                    int index = helpProxies.FindIndex(x => x == i);
+                    return i;
                 }
             }
 
             return -1;
         }
 
-        //private static int GetID(Dictionary<int, int> processesIDs, Process[] newProcessList)
-        //{
-        //    int cnt=0;
-        //    int ret = -1;
+        public static int LastNumber(string number)
+        {
+            int result=-1;
+            Int32.TryParse(number, out result);
 
-        //    foreach (var p in processesIDs)
-        //    {
-        //        if(cnt == newProcessList.Length)
-        //        {
-        //            ret = p.Value;
-        //            break;
-        //        }else
-        //        {
-        //            cnt = 0;
-        //            for (int i = 0; i < newProcessList.Length; ++i)
-        //            {
-        //                if (p.Key != newProcessList[i].Id)
-        //                {
-        //                    cnt++;
-        //                }
-        //            }
-        //        }
-                
-        //    }
+            if(result == -1)
+            {
+                Console.WriteLine("No valid port received.");
+            }else
+            {
+                result = result % 10;
+            }
 
-        //    if(ret == -1)
-        //    {
-        //        ret = 4;
-        //    }else
-        //    {
-        //        ret = ret - 1;
-        //    }
+            return result;
+        }
 
-        //    return ret;
-        //}
+        public static string GetPort(Dictionary<Process, string> processesIDs)
+        {
+            string ret = "";
+
+            foreach(var p in processesIDs)
+            {
+                if(p.Key.HasExited)
+                {
+                    ret = p.Value;
+                    processesIDs.Remove(p.Key);
+                    int instance = Int32.Parse(ret) % 10;
+                    globalIndex=helpProxies.FindIndex(x => x == instance);
+                    helpProxies.RemoveAt(globalIndex);
+                    proxies.RemoveAt(globalIndex);
+
+                    return ret;
+                }
+            }
+
+            return ret;
+        }
+
+        
         private static bool Exist()
         {
             bool ret;
@@ -154,10 +193,16 @@ namespace ComputeService
             {
                 try
                 {
-                    Process.Start(path, Containers.Path.ports[i]);
+                    Process p= Process.Start(path, Containers.Path.ports[i]);
                     NetTcpBinding binding = new NetTcpBinding();
+                    binding.OpenTimeout = new TimeSpan(0, 10, 0);
+                    binding.CloseTimeout = new TimeSpan(0, 10, 0);
+                    binding.SendTimeout = new TimeSpan(0, 10, 0);
+                    binding.ReceiveTimeout = new TimeSpan(0, 10, 0);
                     ChannelFactory<IContainer> factory = new ChannelFactory<IContainer>(binding, new EndpointAddress($"net.tcp://localhost:{Containers.Path.ports[i]}/IContainer")); // moraju se cuvati proxiji zbog poziva metode load n puta 
                     proxies.Add(factory.CreateChannel());
+                    helpProxies.Add(i);
+                    OriginalprocessesIDs.Add(p, Containers.Path.ports[i]);
                 }
                 catch (Exception e)
                 {

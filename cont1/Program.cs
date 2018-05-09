@@ -27,6 +27,11 @@ namespace Containers
         {
             NetTcpBinding binding = new NetTcpBinding();
             host = new ServiceHost(typeof(Container));
+            //Default timeout je 60 sekundi pa puca na proxy tokom debug-a
+            binding.OpenTimeout = new TimeSpan(0, 10, 0);
+            binding.CloseTimeout = new TimeSpan(0, 10, 0);
+            binding.SendTimeout = new TimeSpan(0, 10, 0);
+            binding.ReceiveTimeout = new TimeSpan(0, 10, 0);
             //Path.currentIndex++;
             host.AddServiceEndpoint(typeof(IContainer), binding, new Uri($"net.tcp://localhost:{port}/IContainer"));
 
@@ -46,11 +51,11 @@ namespace Containers
                     debug.IncludeExceptionDetailInFaults = true;
                 }
             }
-            //int p = Int32.Parse(port) - 10009;
+            int p = Int32.Parse(port) % 10;
             try
             {
                 host.Open();
-                Console.WriteLine($"Container started.");
+                Console.WriteLine($"Container {p+1} started.");
             }catch(Exception e)
             {
                 Console.WriteLine($"Container  didn't start - error: {e.Message}");
